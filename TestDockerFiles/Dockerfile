@@ -1,5 +1,5 @@
 # Builder stage for cmctl with updated containerd dependency
-FROM sfbrdevhelmweacr.azurecr.io/golang:1.25.4_echo AS cmctl-builder
+FROM sfbrdevhelmweacr.azurecr.io/golang:1.25.4-20251126 AS cmctl-builder
 
 ARG CMCTL_VERSION=v2.3.0
 
