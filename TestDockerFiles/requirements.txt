@@ -1,0 +1,21 @@
+# Core dependencies
+setuptools==80.9.0
+setuptools-rust
+pip
+
+# AWS and cloud services
+requests
+python-dateutil
+boto3
+yq
+azure-storage-blob
+azure-identity
+idna==3.7
+urllib3==1.26.17
+
+# Database and authentication
+sqlalchemy
+pyodbc
+msal
+azure-core
+psycopg2-binary
