@@ -1,6 +1,21 @@
 ---
 version: 2
+
+registries:
+  sfbrdevhelmweacr:
+    type: docker-registry
+    url: sfbrdevhelmweacr.azurecr.io
+    username: sfbrdevhelmweacr
+    password: ${{ secrets.SFBRDEV_ACCESS_KEY }}
 updates:
+  - package-ecosystem: "docker"
+    directory: "/TestDockerFiles"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "pip"
+    directory: "/TestDockerFiles"
+    schedule:
+      interval: "daily"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
