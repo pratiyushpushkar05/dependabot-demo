@@ -14,12 +14,12 @@ updates:
     directory: "/TestDockerFiles"
     schedule:
       interval: "cron"
-      cronjob: "0 5 * * *"
+      cronjob: "0 17 * * *"
   - package-ecosystem: "pip"
     directory: "/TestDockerFiles"
     schedule:
       interval: "cron"
-      cronjob: "0 5 * * *"
+      cronjob: "0 17 * * *"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
