@@ -33,7 +33,6 @@ RUN dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noar
     dnf install -y wget zip unzip jq git python3 python3-pip bind-utils net-tools openssl bc krb5-workstation krb5-libs netcat iputils iperf && \
     rm -rf /usr/lib/python3.9/site-packages/requests* /usr/lib/python3.9/site-packages/urllib3* /usr/lib/python3.9/site-packages/idna* /usr/lib/python3.9/site-packages/charset_normalizer* /usr/lib/python3.9/site-packages/setuptools* && \
     rm -rf /usr/lib64/python3.9/site-packages/requests* /usr/lib64/python3.9/site-packages/urllib3* /usr/lib64/python3.9/site-packages/idna* /usr/lib64/python3.9/site-packages/charset_normalizer* /usr/lib64/python3.9/site-packages/setuptools* && \
-    pip3 install --upgrade setuptools-rust pip && \
     pip3 install --ignore-installed -r /tmp/requirements.txt && \
     curl https://packages.microsoft.com/config/rhel/9/prod.repo | tee /etc/yum.repos.d/microsoft.repo && \
     dnf install -y powershell && \
