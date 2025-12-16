@@ -1,0 +1,105 @@
+# ---
+# # This workflow runs every hour to:
+# # 1. Authenticate with Azure using OIDC (managed identity)
+# # 2. Retrieve a short-lived Azure AD access token
+# # 3. Update a GitHub secret with the new token
+# #
+# # Prerequisites:
+# # 1. Configure OIDC federation between GitHub and Azure:
+# #    - In Azure Portal, create/configure a federated identity credential
+# #    - Grant the managed identity necessary permissions
+# # 2. Set up the following GitHub secrets:
+# #    - AZURE_CLIENT_ID: The Azure managed identity client ID
+# #      How to get: Azure Portal → Managed Identities → Select identity → Copy "Client (application) ID"
+# #      OR: Azure Portal → Your Resource → Identity → Copy "Client (application) ID" (for system-assigned)
+# #      OR: Azure Portal → Azure AD → App registrations → Select app → Copy "Application (client) ID"
+# #    - AZURE_TENANT_ID: Your Azure tenant ID
+# #      How to get: Azure Portal → Azure Active Directory → Overview → Copy "Tenant ID"
+# #    - AZURE_SUBSCRIPTION_ID: Your Azure subscription ID
+# #      How to get: Azure Portal → Subscriptions → Select subscription → Copy "Subscription ID"
+# #    - GITHUB_PAT: A Personal Access Token with 'repo' and 'admin:repo' scopes
+# #                  (required to update secrets - default GITHUB_TOKEN cannot update secrets)
+# #    - AZURE_TOKEN_SECRET_NAME: (Optional) Name of the GitHub secret to update
+# #                                Defaults to 'AZURE_ACCESS_TOKEN' if not provided
+# #
+# # Note: The default GITHUB_TOKEN cannot update secrets for security reasons.
+# #       You must use a Personal Access Token (PAT) stored in GITHUB_PAT secret.
+
+# name: Update Azure Token Secret
+
+# on:
+#   schedule:
+#     # Run every hour
+#     - cron: '*/5 * * * *'
+#   workflow_dispatch: # Allow manual triggering
+
+# permissions:
+#   contents: read
+#   # Note: secrets: write is not a valid permission at workflow level
+#   # We use a PAT (GITHUB_PAT) which has its own permissions to update secrets
+
+# jobs:
+#   update-token:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Azure Login with OIDC
+#         uses: azure/login@v1
+#         with:
+#           client-id: ${{ secrets.AZURE_CLIENT_ID }}
+#           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+#           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+#           use-oidc: true # Use managed identity / OIDC authentication
+
+#       - name: Get Azure AD Token
+#         id: get-token
+#         run: |
+#           # Get an access token for Azure Resource Manager
+#           # This token is short-lived (typically 1 hour)
+#           TOKEN=$(az account get-access-token --query accessToken -o tsv)
+          
+#           # Store token in output for use in next step
+#           echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          
+#           # Also output token length for verification (without exposing the token)
+#           TOKEN_LENGTH=${#TOKEN}
+#           echo "Token retrieved successfully (length: $TOKEN_LENGTH characters)"
+#           echo "token_length=$TOKEN_LENGTH" >> $GITHUB_OUTPUT
+
+#       # - name: Authenticate GitHub CLI
+#       #   env:
+#       #     GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
+#       #   run: |
+#       #     if [ -z "$GITHUB_TOKEN" ]; then
+#       #       echo "Error: GITHUB_PAT secret is not set. Please create a Personal Access Token"
+#       #       echo "with 'repo' and 'admin:repo' scopes and add it as GITHUB_PAT secret."
+#       #       exit 1
+#       #     fi
+          
+#       #     # Authenticate GitHub CLI
+#       #     echo "$GITHUB_TOKEN" | gh auth login --with-token
+          
+#       #     # Verify authentication
+#       #     gh auth status
+
+#       # - name: Update GitHub Secret
+#       #   env:
+#       #     SECRET_NAME: ${{ secrets.AZURE_TOKEN_SECRET_NAME || 'AZURE_ACCESS_TOKEN' }}
+#       #     SECRET_VALUE: ${{ steps.get-token.outputs.token }}
+#       #   run: |
+#       #     echo "Updating secret: ${SECRET_NAME}"
+          
+#       #     # Use GitHub CLI to update the secret (handles encryption automatically)
+#       #     echo "$SECRET_VALUE" | gh secret set "${SECRET_NAME}" --repo "${GITHUB_REPOSITORY}"
+          
+#       #     if [ $? -eq 0 ]; then
+#       #       echo "Successfully updated secret: ${SECRET_NAME}"
+#       #     else
+#       #       echo "Error: Failed to update secret"
+#       #       exit 1
+#       #     fi
+
+#       # - name: Verify Secret Update
+#       #   run: |
+#       #     echo "Secret update completed successfully"
+#       #     echo "Secret name: ${{ secrets.AZURE_TOKEN_SECRET_NAME || 'AZURE_ACCESS_TOKEN' }}"
+#       #     echo "Token was retrieved and updated at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
