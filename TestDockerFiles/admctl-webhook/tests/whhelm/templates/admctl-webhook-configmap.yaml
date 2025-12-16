@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admctl-webhook-configmap
+  namespace: default
+data:
+  admctl-webhook-config.yaml: |
+    tolerationSpecs:
+    - spec:
+        key: "example-key-with-ns"
+        operator: "Exists"
+        effect: "NoSchedule"
+      namespace: "uipath"
+      labelSelector:
+        labelKey: "labelValue"
+    - spec:
+        key: "example-key-no-ns"
+        operator: "Exists"
+        effect: "NoSchedule"

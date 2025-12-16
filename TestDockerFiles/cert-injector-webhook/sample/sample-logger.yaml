@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loggerclient-deployment
+  namespace: uipath-test
+  labels:
+    app: loggerclient
+  annotations:
+    webhook-annotate: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loggerclient
+  template:
+    metadata:
+      labels:
+        app: loggerclient
+      annotations:
+        inject-logging-sidecar: "true"
+    spec:
+      containers:
+      - name: helloworld
+        image: istio/examples-helloworld-v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+          protocol: TCP

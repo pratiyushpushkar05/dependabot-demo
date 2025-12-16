@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: certificate-initializer-injector
+  namespace: default
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1002"
+  labels:
+    app: certificate-initializer-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: certificate-initializer-injector
+  template:
+    metadata:
+      labels:
+        app: certificate-initializer-injector
+    spec:
+      containers:
+        - name: certificate-initializer-injector
+          image: localcruipath.azurecr.io/certificate-initializer-injector:latest
+          imagePullPolicy: Always
+          args:
+            - -certDir=/etc/webhook/certs
+            - -sidecarConfig=/etc/webhook/config/cert-initializer-injector-config.yaml
+            - -port=8443
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+            - name: webhook-config
+              mountPath: /etc/webhook/config
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: certificate-initializer-injector-webhook-certs
+        - name: webhook-config
+          configMap:
+            name: certificate-initializer-injector-configmap

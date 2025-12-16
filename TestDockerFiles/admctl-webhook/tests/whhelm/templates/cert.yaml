@@ -1,0 +1,22 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: admctl-webhook-issuer
+  namespace: default
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: admctl-webhook-cert
+  namespace: default
+spec:
+  secretName: admctl-webhook-certs
+  dnsNames:
+    - admctl-webhook-service.default.svc
+    - admctl-webhook-service.default.svc.cluster.local
+  issuerRef:
+    name: admctl-webhook-issuer

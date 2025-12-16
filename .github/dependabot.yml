@@ -1,6 +1,12 @@
 ---
 version: 2
 
+multi-ecosystem-groups:
+  uipath:
+    schedule:
+      interval: "cron"
+      cronjob: "*/5 * * * *"
+
 registries:
   sfbrdevhelmweacr:
     type: docker-registry
@@ -12,23 +18,13 @@ updates:
     registries:
       - sfbrdevhelmweacr
     directory: "/TestDockerFiles"
-    schedule:
-      interval: "cron"
-      cronjob: "0 17 * * *"
+    patterns: ["*"]
+    multi-ecosystem-group: "uipath"
   - package-ecosystem: "pip"
     directory: "/TestDockerFiles"
-    schedule:
-      interval: "cron"
-      cronjob: "0 17 * * *"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: npm
-    directory: "/javascript"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: bundler
-    directory: "/ruby"
-    schedule:
-      interval: "weekly"
+    patterns: ["*"]
+    multi-ecosystem-group: "uipath"
+  - package-ecosystem: "gomod"
+    directory: "/TestDockerFiles"
+    patterns: ["*"]
+    multi-ecosystem-group: "uipath"
