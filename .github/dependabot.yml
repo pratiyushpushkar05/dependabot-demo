@@ -23,8 +23,9 @@ updates:
       - "/TestDockerFiles/cert-injector-webhook"
       - "/TestDockerFiles/cert-injector-webhook/cert-trustor/debian"
       - "/TestDockerFiles/cert-injector-webhook/cert-trustor/rhel"
-    patterns: ["*"]
-    multi-ecosystem-group: "uipath"
+    schedule:
+      interval: "cron"
+      cronjob: "*/5 * * * *"
   - package-ecosystem: "pip"
     directory: "/TestDockerFiles"
     patterns: ["*"]
