@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admctl-webhook
+  namespace: default
+  labels:
+    app: admctl-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admctl-webhook
+  template:
+    metadata:
+      labels:
+        app: admctl-webhook
+    spec:
+      containers:
+        - name: admctl-webhook
+          image: "sfbrdevhelmweacr.azurecr.io/admctl-webhook:{{ .Values.imagetag }}"
+          imagePullPolicy: Always
+          args:
+            - -certDir=/etc/webhook/certs
+            - -config=/etc/webhook/config/admctl-webhook-config.yaml
+            - -port=8443
+          volumeMounts:
+            - name: admctl-webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+            - name: admctl-webhook-config
+              mountPath: /etc/webhook/config
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+      volumes:
+        - name: admctl-webhook-certs
+          secret:
+            secretName: admctl-webhook-certs
+        - name: admctl-webhook-config
+          configMap:
+            name: admctl-webhook-configmap

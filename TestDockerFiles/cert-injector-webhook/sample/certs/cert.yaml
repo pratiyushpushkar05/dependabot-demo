@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: certificate-initializer-injector-issuer
+  namespace: default
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1002"
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: certificate-initializer-injector-webhook-cert
+  namespace: default
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1002"
+spec:
+  secretName: certificate-initializer-injector-webhook-certs
+  dnsNames:
+    - certificate-initializer-injector-webhook-service.default.svc
+    - certificate-initializer-injector-webhook-service.default.svc.cluster.local
+  issuerRef:
+    name: certificate-initializer-injector-issuer
