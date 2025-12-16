@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM sfbrdevhelmweacr.azurecr.io/golang:1.25.4_echo as builder
+FROM sfbrdevhelmweacr.azurecr.io/golang:1.25.4-20251126 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
