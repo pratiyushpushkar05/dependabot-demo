@@ -17,7 +17,12 @@ updates:
   - package-ecosystem: "docker"
     registries:
       - sfbrdevhelmweacr
-    directory: "/TestDockerFiles"
+    directories: 
+      - "/TestDockerFiles"
+      - "/TestDockerFiles/admctl-webhook"
+      - "/TestDockerFiles/cert-injector-webhook"
+      - "/TestDockerFiles/cert-injector-webhook/cert-trustor/debian"
+      - "/TestDockerFiles/cert-injector-webhook/cert-trustor/rhel"
     patterns: ["*"]
     multi-ecosystem-group: "uipath"
   - package-ecosystem: "pip"
@@ -25,6 +30,8 @@ updates:
     patterns: ["*"]
     multi-ecosystem-group: "uipath"
   - package-ecosystem: "gomod"
-    directory: "/TestDockerFiles"
+    directories:
+      - "/TestDockerFiles/admctl-webhook"
+      - "/TestDockerFiles/cert-injector-webhook"
     patterns: ["*"]
     multi-ecosystem-group: "uipath"
