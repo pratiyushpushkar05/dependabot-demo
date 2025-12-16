@@ -11,7 +11,7 @@ registries:
   sfbrdevhelmweacr:
     type: docker-registry
     url: sfbrdevhelmweacr.azurecr.io
-    username: sfbrdevhelmweacr
+    username: ${{ secrets.SFBRDEV_CLIENT_ID }}
     password: ${{ secrets.SFBRDEV_ACCESS_KEY }}
 updates:
   - package-ecosystem: "docker"
