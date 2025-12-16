@@ -13,10 +13,15 @@ registries:
     url: sfbrdevhelmweacr.azurecr.io
     username: ${{ secrets.SFBRDEV_CLIENT_ID }}
     password: ${{ secrets.SFBRDEV_ACCESS_KEY }}
+  mzwkossalpweacr:
+    type: docker-registry
+    url: mzwkossalpweacr.azurecr.io
+    username: ${{ secrets.MZWKOS_CLIENT_ID }}
+    password: ${{ secrets.MZWKOS_ACCESS_KEY }}
 updates:
   - package-ecosystem: "docker"
     registries:
-      - sfbrdevhelmweacr
+      - mzwkossalpweacr
     directories: 
       - "/TestDockerFiles"
       - "/TestDockerFiles/admctl-webhook"
