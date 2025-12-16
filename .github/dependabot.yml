@@ -5,7 +5,7 @@ multi-ecosystem-groups:
   uipath:
     schedule:
       interval: "cron"
-      cronjob: "*/5 * * * *"
+      cronjob: "0 17 * * *"
 
 registries:
   sfbrdevhelmweacr:
@@ -25,7 +25,7 @@ updates:
       - "/TestDockerFiles/cert-injector-webhook/cert-trustor/rhel"
     schedule:
       interval: "cron"
-      cronjob: "*/5 * * * *"
+      cronjob: "0 17 * * *"
   - package-ecosystem: "pip"
     directory: "/TestDockerFiles"
     patterns: ["*"]
