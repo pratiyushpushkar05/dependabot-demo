@@ -5,7 +5,7 @@ multi-ecosystem-groups:
   uipath:
     schedule:
       interval: "cron"
-      cronjob: "0 17 * * *"
+      cronjob: "0 2 * * *"
 
 registries:
   mzwkossalpweacr:
