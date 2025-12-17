@@ -1,5 +1,5 @@
 # Builder stage for cmctl with updated containerd dependency
-FROM mzwkossalpweacr.azurecr.io/echo/docker.io/library/golang:1.25.4-20251126 AS cmctl-builder
+FROM mzwkossalpweacr.azurecr.io/echo/docker.io/library/golang:1-20251119 AS cmctl-builder
 
 ARG CMCTL_VERSION=v2.3.0
 
@@ -16,7 +16,7 @@ RUN apt-get update && \
     GOARCH=amd64 GOOS=linux go build -o cmctl .
 
 # Final stage
-FROM registry.access.redhat.com/ubi9/ubi:9.7-1762948793
+FROM registry.access.redhat.com/ubi9/ubi:9.7-1764794285
 
 LABEL maintainer="Service Fabric Core Team"
 LABEL org.opencontainers.builder.image.vendor="echohq.com"
