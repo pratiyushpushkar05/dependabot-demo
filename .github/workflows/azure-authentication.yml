@@ -1,105 +1,158 @@
-# ---
-# # This workflow runs every hour to:
-# # 1. Authenticate with Azure using OIDC (managed identity)
-# # 2. Retrieve a short-lived Azure AD access token
-# # 3. Update a GitHub secret with the new token
-# #
-# # Prerequisites:
-# # 1. Configure OIDC federation between GitHub and Azure:
-# #    - In Azure Portal, create/configure a federated identity credential
-# #    - Grant the managed identity necessary permissions
-# # 2. Set up the following GitHub secrets:
-# #    - AZURE_CLIENT_ID: The Azure managed identity client ID
-# #      How to get: Azure Portal → Managed Identities → Select identity → Copy "Client (application) ID"
-# #      OR: Azure Portal → Your Resource → Identity → Copy "Client (application) ID" (for system-assigned)
-# #      OR: Azure Portal → Azure AD → App registrations → Select app → Copy "Application (client) ID"
-# #    - AZURE_TENANT_ID: Your Azure tenant ID
-# #      How to get: Azure Portal → Azure Active Directory → Overview → Copy "Tenant ID"
-# #    - AZURE_SUBSCRIPTION_ID: Your Azure subscription ID
-# #      How to get: Azure Portal → Subscriptions → Select subscription → Copy "Subscription ID"
-# #    - GITHUB_PAT: A Personal Access Token with 'repo' and 'admin:repo' scopes
-# #                  (required to update secrets - default GITHUB_TOKEN cannot update secrets)
-# #    - AZURE_TOKEN_SECRET_NAME: (Optional) Name of the GitHub secret to update
-# #                                Defaults to 'AZURE_ACCESS_TOKEN' if not provided
-# #
-# # Note: The default GITHUB_TOKEN cannot update secrets for security reasons.
-# #       You must use a Personal Access Token (PAT) stored in GITHUB_PAT secret.
+---
+# This workflow runs on schedule to:
+# 1. Authenticate with Azure using OIDC (managed identity)
+# 2. Rotate the client secret for the app registration (MZWKOS_CLIENT_ID)
+# 3. Save the new client secret to MZWKOS_ACCESS_KEY GitHub secret
+# 4. Delete the old client secret from Azure
+#
+# Prerequisites:
+# 1. Configure OIDC federation between GitHub and Azure:
+#    - In Azure Portal, create/configure a federated identity credential
+#    - Grant the managed identity necessary permissions:
+#      * Application.ReadWrite.All (to manage app registrations)
+#      * OR Application.ReadWrite.OwnedBy (if the managed identity owns the app)
+# 2. Set up the following GitHub secrets:
+#    - AZURE_CLIENT_ID: The Azure managed identity client ID
+#      How to get: Azure Portal → Managed Identities → Select identity → Copy "Client (application) ID"
+#      OR: Azure Portal → Your Resource → Identity → Copy "Client (application) ID" (for system-assigned)
+#      OR: Azure Portal → Azure AD → App registrations → Select app → Copy "Application (client) ID"
+#    - AZURE_TENANT_ID: Your Azure tenant ID
+#      How to get: Azure Portal → Azure Active Directory → Overview → Copy "Tenant ID"
+#    - AZURE_SUBSCRIPTION_ID: Your Azure subscription ID
+#      How to get: Azure Portal → Subscriptions → Select subscription → Copy "Subscription ID"
+#    - GITHUB_PAT: A Personal Access Token with 'repo' and 'admin:repo' scopes
+#                  (required to update secrets - default GITHUB_TOKEN cannot update secrets)
+#    - MZWKOS_CLIENT_ID: The client ID of the app registration whose secret needs to be rotated
+#
+# Note: The default GITHUB_TOKEN cannot update secrets for security reasons.
+#       You must use a Personal Access Token (PAT) stored in GITHUB_PAT secret.
 
-# name: Update Azure Token Secret
+name: Rotate Azure Client Secret
 
-# on:
-#   schedule:
-#     # Run every hour
-#     - cron: '*/5 * * * *'
-#   workflow_dispatch: # Allow manual triggering
+on:
+  schedule:
+    # Run every 15 days at 2 AM UTC
+    - cron: '0 2 1,16 * *'
+  workflow_dispatch: # Allow manual triggering
 
-# permissions:
-#   contents: read
-#   # Note: secrets: write is not a valid permission at workflow level
-#   # We use a PAT (GITHUB_PAT) which has its own permissions to update secrets
+permissions:
+  contents: read
+  # Note: secrets: write is not a valid permission at workflow level
+  # We use a PAT (GITHUB_PAT) which has its own permissions to update secrets
 
-# jobs:
-#   update-token:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Azure Login with OIDC
-#         uses: azure/login@v1
-#         with:
-#           client-id: ${{ secrets.AZURE_CLIENT_ID }}
-#           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-#           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-#           use-oidc: true # Use managed identity / OIDC authentication
+jobs:
+  update-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login with OIDC
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          use-oidc: true # Use managed identity / OIDC authentication
 
-#       - name: Get Azure AD Token
-#         id: get-token
-#         run: |
-#           # Get an access token for Azure Resource Manager
-#           # This token is short-lived (typically 1 hour)
-#           TOKEN=$(az account get-access-token --query accessToken -o tsv)
+      - name: Install jq
+        run: |
+          if ! command -v jq &> /dev/null; then
+            echo "Installing jq..."
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Reset Service Principal Credential
+        id: reset-credential
+        env:
+          APP_ID: ${{ secrets.MZWKOS_CLIENT_ID }}
+        run: |
+          if [ -z "$APP_ID" ]; then
+            echo "Error: MZWKOS_CLIENT_ID secret is not set"
+            exit 1
+          fi
+
+          echo "Resetting service principal credential for app ID: ${APP_ID}"
+
+          # Reset the credential using az ad sp credential reset
+          # This automatically deletes all existing credentials and creates a new one
+          # The --id parameter accepts both object ID and app ID (client ID)
+          CREDENTIAL_OUTPUT=$(az ad sp credential reset \
+            --id "${APP_ID}" \
+            --display-name "dependabot-secret" \
+            --query "{ClientSecret:password, ExpiresOn:endDateTime}" \
+            --output json)
+
+          if [ $? -ne 0 ]; then
+            echo "Error: Failed to reset service principal credential"
+            exit 1
+          fi
+
+          # Display the output as table for logging (password will be masked in logs)
+          echo "Credential reset successful:"
+          echo "$CREDENTIAL_OUTPUT" | jq -r 'to_entries | map("\(.key): \(.value)") | .[]'
+
+          # Extract the new secret value
+          NEW_SECRET_VALUE=$(echo "$CREDENTIAL_OUTPUT" | jq -r '.ClientSecret // empty')
+          EXPIRES_ON=$(echo "$CREDENTIAL_OUTPUT" | jq -r '.ExpiresOn // empty')
+
+          if [ -z "$NEW_SECRET_VALUE" ] || [ "$NEW_SECRET_VALUE" = "null" ]; then
+            echo "Error: Failed to extract new secret value from response"
+            exit 1
+          fi
+
+          # Store the new secret value
+          echo "new_secret_value=$NEW_SECRET_VALUE" >> $GITHUB_OUTPUT
+          echo "expires_on=$EXPIRES_ON" >> $GITHUB_OUTPUT
+
+          # Output verification (without exposing the secret)
+          SECRET_LENGTH=${#NEW_SECRET_VALUE}
+          echo "New credential created successfully"
+          echo "  Display Name: dependabot-secret"
+          echo "  Expires On: ${EXPIRES_ON}"
+          echo "  Secret length: ${SECRET_LENGTH} characters"
+
+      - name: Authenticate GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
+        run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "Error: GITHUB_PAT secret is not set. Please create a Personal Access Token"
+            echo "with 'repo' and 'admin:repo' scopes and add it as GITHUB_PAT secret."
+            exit 1
+          fi
           
-#           # Store token in output for use in next step
-#           echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          # Authenticate GitHub CLI
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
           
-#           # Also output token length for verification (without exposing the token)
-#           TOKEN_LENGTH=${#TOKEN}
-#           echo "Token retrieved successfully (length: $TOKEN_LENGTH characters)"
-#           echo "token_length=$TOKEN_LENGTH" >> $GITHUB_OUTPUT
+          # Verify authentication
+          gh auth status
 
-#       # - name: Authenticate GitHub CLI
-#       #   env:
-#       #     GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
-#       #   run: |
-#       #     if [ -z "$GITHUB_TOKEN" ]; then
-#       #       echo "Error: GITHUB_PAT secret is not set. Please create a Personal Access Token"
-#       #       echo "with 'repo' and 'admin:repo' scopes and add it as GITHUB_PAT secret."
-#       #       exit 1
-#       #     fi
-          
-#       #     # Authenticate GitHub CLI
-#       #     echo "$GITHUB_TOKEN" | gh auth login --with-token
-          
-#       #     # Verify authentication
-#       #     gh auth status
+      - name: Update MZWKOS_ACCESS_KEY Secret in Dependabot
+        env:
+          SECRET_NAME: "MZWKOS_ACCESS_KEY"
+          SECRET_VALUE: ${{ steps.reset-credential.outputs.new_secret_value }}
+        run: |
+          if [ -z "$SECRET_VALUE" ]; then
+            echo "Error: New secret value is empty"
+            exit 1
+          fi
 
-#       # - name: Update GitHub Secret
-#       #   env:
-#       #     SECRET_NAME: ${{ secrets.AZURE_TOKEN_SECRET_NAME || 'AZURE_ACCESS_TOKEN' }}
-#       #     SECRET_VALUE: ${{ steps.get-token.outputs.token }}
-#       #   run: |
-#       #     echo "Updating secret: ${SECRET_NAME}"
-          
-#       #     # Use GitHub CLI to update the secret (handles encryption automatically)
-#       #     echo "$SECRET_VALUE" | gh secret set "${SECRET_NAME}" --repo "${GITHUB_REPOSITORY}"
-          
-#       #     if [ $? -eq 0 ]; then
-#       #       echo "Successfully updated secret: ${SECRET_NAME}"
-#       #     else
-#       #       echo "Error: Failed to update secret"
-#       #       exit 1
-#       #     fi
+          echo "Updating Dependabot secret: ${SECRET_NAME}"
 
-#       # - name: Verify Secret Update
-#       #   run: |
-#       #     echo "Secret update completed successfully"
-#       #     echo "Secret name: ${{ secrets.AZURE_TOKEN_SECRET_NAME || 'AZURE_ACCESS_TOKEN' }}"
-#       #     echo "Token was retrieved and updated at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          # Use gh CLI to update Dependabot secret (requires gh CLI 2.20.0+)
+          echo "$SECRET_VALUE" | gh secret set "${SECRET_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --app dependabot
+
+          if [ $? -eq 0 ]; then
+            echo "Successfully updated Dependabot secret: ${SECRET_NAME}"
+          else
+            echo "Error: Failed to update Dependabot secret"
+            exit 1
+          fi
+
+      - name: Verify Secret Rotation
+        run: |
+          echo "Client secret rotation completed successfully"
+          echo "Secret name: MZWKOS_ACCESS_KEY"
+          echo "App ID (Client ID): ${{ secrets.MZWKOS_CLIENT_ID }}"
+          echo "Credential expires on: ${{ steps.reset-credential.outputs.expires_on }}"
+          echo "Secret rotation completed at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
