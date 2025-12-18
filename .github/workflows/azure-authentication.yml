@@ -37,6 +37,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write  # Required for OIDC authentication to Azure
   # Note: secrets: write is not a valid permission at workflow level
   # We use a PAT (GITHUB_PAT) which has its own permissions to update secrets
 
