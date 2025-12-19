@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM mzwkossalpweacr.azurecr.io/echo/docker.io/library/golang:1.25.4-20251126 as builder
+FROM mzwkossalpweacr.azurecr.io/echo/docker.io/library/golang:1-20251119 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
