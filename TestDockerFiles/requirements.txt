@@ -1,5 +1,5 @@
 # Core dependencies
-setuptools==80.9.0
+setuptools==82.0.0
 setuptools-rust
 pip
 
@@ -10,8 +10,8 @@ boto3
 yq
 azure-storage-blob
 azure-identity
-idna==3.7
-urllib3==1.26.17
+idna==3.11
+urllib3==2.6.3
 
 # Database and authentication
 sqlalchemy
